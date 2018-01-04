@@ -336,8 +336,9 @@ class ShowUrlsTransform(object):
 class Table(object):
     """A table data"""
 
-    def __init__(self, node):
+    def __init__(self, node, builder):
         # type: (nodes.table) -> None
+        self.builder = builder
         self.header = []                        # type: List[unicode]
         self.body = []                          # type: List[unicode]
         self.align = node.get('align')
@@ -351,6 +352,13 @@ class Table(object):
         self.caption_footnotetexts = []         # type: List[unicode]
         self.header_footnotetexts = []          # type: List[unicode]
         self.stubs = []                         # type: List[int]
+
+        if self.builder.config.latex_booktabs:
+            self.booktabs = True
+            self.colsep = ''
+        else:
+            self.booktabs = False
+            self.colsep = '|'
 
         # current position
         self.col = 0
@@ -402,16 +410,19 @@ class Table(object):
         elif self.colwidths and 'colwidths-given' in self.classes:
             total = sum(self.colwidths)
             colspecs = ['\\X{%d}{%d}' % (width, total) for width in self.colwidths]
-            return '{|%s|}\n' % '|'.join(colspecs)
+            return '{%s%s%s}\n' % (self.colsep, self.colsep.join(colspecs),
+                    self.colsep)
         elif self.has_problematic:
-            return '{|*{%d}{\\X{1}{%d}|}}\n' % (self.colcount, self.colcount)
+            return '{%s*{%d}{\\X{1}{%d}%s}}\n' % (self.colsep, self.colcount,
+                    self.colcount, self.colsep)
         elif self.get_table_type() == 'tabulary':
             # sphinx.sty sets T to be J by default.
-            return '{|' + ('T|' * self.colcount) + '}\n'
+            return '{' + self.colsep + (('T' + self.colsep) * self.colcount) + '}\n'
         elif self.has_oldproblematic:
-            return '{|*{%d}{\\X{1}{%d}|}}\n' % (self.colcount, self.colcount)
+            return '{%s*{%d}{\\X{1}{%d}%s}}\n' % (self.colsep, self.colcount,
+                    self.colcount, self.colsep)
         else:
-            return '{|' + ('l|' * self.colcount) + '}\n'
+            return '{' + colsep + (('l' + colsep) * self.colcount) + '}\n'
 
     def add_cell(self, height, width):
         # type: (int, int) -> None
@@ -1344,7 +1355,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
             raise UnsupportedError(
                 '%s:%s: nested tables are not yet implemented.' %
                 (self.curfilestack[-1], node.line or ''))
-        self.table = Table(node)
+        self.table = Table(node, self.builder)
         if self.next_table_colspec:
             self.table.colspec = '{%s}\n' % self.next_table_colspec
         self.next_table_colspec = None
@@ -1431,13 +1442,17 @@ class LaTeXTranslator(nodes.NodeVisitor):
                     # insert suitable strut for equalizing row heights in given multirow
                     self.body.append('\\sphinxtablestrut{%d}' % cell.cell_id)
                 else:  # use \multicolumn for wide multirow cell
-                    self.body.append('\\multicolumn{%d}{|l|}'
+                    self.body.append('\\multicolumn{%d}{%sl%s}'
                                      '{\\sphinxtablestrut{%d}}' %
-                                     (cell.width, cell.cell_id))
+                                     (cell.width, self.table.colsep,
+                                         self.table.colsep, cell.cell_id))
 
     def depart_row(self, node):
         # type: (nodes.Node) -> None
         self.body.append('\\\\\n')
+        if self.table.booktabs:
+            self.table.row += 1
+            return
         cells = [self.table.cell(self.table.row, i) for i in range(self.table.colcount)]
         underlined = [cell.row + cell.height == self.table.row + 1 for cell in cells]
         if all(underlined):
@@ -1463,9 +1478,11 @@ class LaTeXTranslator(nodes.NodeVisitor):
         if cell.width > 1:
             if self.builder.config.latex_use_latex_multicolumn:
                 if self.table.col == 0:
-                    self.body.append('\\multicolumn{%d}{|l|}{%%\n' % cell.width)
+                    self.body.append('\\multicolumn{%d}{%sl%s}{%%\n' %
+                            (cell.width, self.table.colsep, self.table.colsep))
                 else:
-                    self.body.append('\\multicolumn{%d}{l|}{%%\n' % cell.width)
+                    self.body.append('\\multicolumn{%d}{l%s}{%%\n' %
+                            (cell.width, self.table.colsep))
                 context = '}%\n'
             else:
                 self.body.append('\\sphinxstartmulticolumn{%d}%%\n' % cell.width)
@@ -1524,9 +1541,9 @@ class LaTeXTranslator(nodes.NodeVisitor):
                     self.body.append('\\sphinxtablestrut{%d}' % nextcell.cell_id)
                 else:
                     # use \multicolumn for wide multirow cell
-                    self.body.append('\\multicolumn{%d}{l|}'
+                    self.body.append('\\multicolumn{%d}{l%s}'
                                      '{\\sphinxtablestrut{%d}}' %
-                                     (nextcell.width, nextcell.cell_id))
+                                     (nextcell.width, self.table.colsep, nextcell.cell_id))
 
     def visit_acks(self, node):
         # type: (nodes.Node) -> None

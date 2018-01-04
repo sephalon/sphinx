@@ -10,17 +10,33 @@
 <%- if table.caption -%>
 \caption{<%= ''.join(table.caption) %>\strut}<%= labels %>\\*[\sphinxlongtablecapskipadjust]
 <% endif -%>
+<%- if table.booktabs -%>
+\toprule
+<%- else -%>
 \hline
+<%- endif -%>
 <%= ''.join(table.header) %>
+<%- if table.booktabs -%>
+\midrule
+<%- endif -%>
 \endfirsthead
 
 \multicolumn{<%= table.colcount %>}{c}%
 {\makebox[0pt]{\sphinxtablecontinued{\tablename\ \thetable{} -- <%= _('continued from previous page') %>}}}\\
+<%- if table.booktabs -%>
+\toprule
+<%- else -%>
 \hline
+<%- endif -%>
 <%= ''.join(table.header) %>
+<%- if table.booktabs -%>
+\midrule
+<%- endif -%>
 \endhead
 
-\hline
+<%- if table.booktabs -%>
+\bottomrule
+<%- endif -%>
 \multicolumn{<%= table.colcount %>}{r}{\makebox[0pt][r]{\sphinxtablecontinued{<%= _('Continued on next page') %>}}}\\
 \endfoot
 
@@ -29,4 +45,7 @@
 <%= ''.join(table.caption_footnotetexts) %>
 <% endif -%>
 <%= ''.join(table.body) %>
+<%- if table.booktabs -%>
+\bottomrule
+<%- endif -%>
 \end{longtable}\sphinxatlongtableend\end{savenotes}
