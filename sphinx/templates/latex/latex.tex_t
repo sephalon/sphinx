@@ -27,6 +27,7 @@
 <%= geometry %>
 <%= usepackages %>
 <%= hyperref %>
+\usepackage[acronym]{glossaries}
 <%= contentsname %>
 <%= numfig_format %>
 <%= literalblockpto %>
@@ -42,9 +43,12 @@
 \newcommand{\sphinxlogo}{<%= logo %>}
 \renewcommand{\releasename}{<%= releasename %>}
 <%= makeindex %>
+<%= abbr %>
+<%= makeglossaries %>
 <%= body %>
 <%= atendofbody %>
 <%= indices %>
 \renewcommand{\indexname}{<%= indexname %>}
 <%= printindex %>
+<%= printglossary %>
 \end{document}

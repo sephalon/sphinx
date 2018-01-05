@@ -90,11 +90,13 @@ DEFAULT_SETTINGS = {
     'logo':            '\\vbox{}',
     'releasename':     '',
     'makeindex':       '\\makeindex',
+    'makeglossaries':  '\\makeglossaries',
     'shorthandoff':    '',
     'maketitle':       '\\maketitle',
     'tableofcontents': '\\sphinxtableofcontents',
     'atendofbody':     '',
     'printindex':      '\\printindex',
+    'printglossary':   '\\printacronyms',
     'transition':      '\n\n\\bigskip\\hrule\\bigskip\n\n',
     'figure_align':    'htbp',
     'tocdepth':        '',
@@ -514,6 +516,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
         nodes.NodeVisitor.__init__(self, document)
         self.builder = builder
         self.body = []  # type: List[unicode]
+        self.abbr = set()  # type: Set[unicode]
 
         # flags
         self.in_title = 0
@@ -706,7 +709,6 @@ class LaTeXTranslator(nodes.NodeVisitor):
         self.footnote_restricted = False
         self.pending_footnotes = []     # type: List[nodes.footnote_reference]
         self.curfilestack = []          # type: List[unicode]
-        self.handled_abbrs = set()      # type: Set[unicode]
         self.next_hyperlink_ids = {}    # type: Dict[unicode, Set[unicode]]
         self.next_section_ids = set()   # type: Set[unicode]
 
@@ -764,7 +766,8 @@ class LaTeXTranslator(nodes.NodeVisitor):
         # type: () -> unicode
         self.elements.update({
             'body': u''.join(self.body),
-            'indices': self.generate_indices()
+            'indices': self.generate_indices(),
+            'abbr': u''.join(self.abbr)
         })
         return self.render('latex.tex_t', self.elements)
 
@@ -2175,13 +2178,13 @@ class LaTeXTranslator(nodes.NodeVisitor):
     def visit_abbreviation(self, node):
         # type: (nodes.Node) -> None
         abbr = node.astext()
-        self.body.append(r'\sphinxstyleabbreviation{')
-        # spell out the explanation once
-        if node.hasattr('explanation') and abbr not in self.handled_abbrs:
-            self.context.append('} (%s)' % self.encode(node['explanation']))
-            self.handled_abbrs.add(abbr)
+        if node.hasattr('explanation'):
+            self.body.append(r'\gls{')
+            self.abbr.add('\\newacronym{' + abbr + '}{' + abbr + '}{' +
+                    node['explanation'] + '}\n')
         else:
-            self.context.append('}')
+            self.body.append(r'{')
+        self.context.append('}')
 
     def depart_abbreviation(self, node):
         # type: (nodes.Node) -> None
