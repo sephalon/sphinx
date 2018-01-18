@@ -1428,6 +1428,13 @@ class LaTeXTranslator(nodes.NodeVisitor):
     def visit_row(self, node):
         # type: (nodes.Node) -> None
         self.table.col = 0
+        if self.builder.config.latex_zebra_stripes and not isinstance(node.parent, nodes.thead):
+            if self.table.row % 2 == 0:
+                self.body.append(
+                '\\rowcolor{RowEvenColor}[\\dimexpr\\tabcolsep+0.1pt\\relax]')
+            else:
+                self.body.append(
+                '\\rowcolor{RowOddColor}[\\dimexpr\\tabcolsep+0.1pt\\relax]')
 
         # fill columns if the row starts with the bottom of multirow cell
         while True:
