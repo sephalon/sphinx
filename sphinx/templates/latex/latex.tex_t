@@ -27,7 +27,7 @@
 <%= geometry %>
 <%= usepackages %>
 <%= hyperref %>
-\usepackage[acronym]{glossaries}
+\usepackage[acronym,toc]{glossaries}
 <%= contentsname %>
 <%= numfig_format %>
 <%= literalblockpto %>
